@@ -1,0 +1,55 @@
+{
+    "mqtt": {
+        "host": "your_mqtt_host",
+        "port": 1883,
+        "topics": {
+            "brightness_topic": "your_brightness_topic",
+            "light_topic": "your_light_topic"
+        }
+    },
+    "HomeAssistant": {
+        "url": "http://your_home_assistant_url",
+        "token": "your_home_assistant_token",
+        "ir_remote_id": "your_ir_remote_id",
+        "device_id": "your_device_id",
+        "script_name": {
+            "on_service": "your_on_service_script",
+            "off_service": "your_off_service_script",
+            "brightness_up_service": "your_brightness_up_service_script",
+            "brightness_down_service": "your_brightness_down_service_script"
+        }
+    },
+    "light": {
+        "name": "your_light_name",
+        "model": "your_light_model",
+        "manufacturer": "your_light_manufacturer",
+        "device_unique_id": "your_device_unique_id",
+        "entity_id": "your_entity_id",
+        "lx_to_brightness": {
+            "0": {
+                "min": 0,
+                "max": 100
+            },
+            "1": {
+                "min": 100,
+                "max": 200
+            },
+            "2": {
+                "min": 101,
+                "max": 200
+            },
+            "3": {
+                "min": 201,
+                "max": 300
+            },
+            "4": {
+                "min": 301,
+                "max": 400
+            },
+            "5": {
+                "min": 401,
+                "max": 1000
+            }
+        }
+    }
+}

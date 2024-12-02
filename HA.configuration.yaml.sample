@@ -1,0 +1,10 @@
+# Example configuration.yaml entry
+mqtt:
+  - light:
+      name: mqtt_json_light_1
+      schema: json
+      supported_color_modes: ["brightness"]
+      brightness: true
+      brightness_scale: 5 # 今回は5段階
+      command_topic: "homeassistant/light/<device-id>/set"
+      state_topic: "homeassistant/light/<device-id>/state"

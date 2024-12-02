@@ -1,0 +1,8 @@
+FROM python:3.12.0-slim-buster
+
+# Set the working directory in the container
+COPY requirements.txt /virtual_light_entity_for_IR/requirements.txt
+WORKDIR /virtual_light_entity_for_IR
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . /virtual_light_entity_for_IR
+
