@@ -1,10 +1,7 @@
 version: '3'
 services:
-  web:
+  virtual_light:
     build: .
-    ports:
-      - "5000:5000"
     volumes:
-      - .:/code
-    environment:
-      FLASK_ENV: development
+      - .:/virtual_light_entity_for_IR
+    command: ["python", "virtual_light_entity_for_IR/main.py"]
