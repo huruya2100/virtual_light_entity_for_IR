@@ -2,6 +2,7 @@ version: '3'
 services:
   virtual_light:
     build: .
+    network_mode: "host"
     volumes:
       - .:/virtual_light_entity_for_IR
     command: ["python", "virtual_light_entity_for_IR/main.py"]
