@@ -2,6 +2,8 @@
     "mqtt": {
         "host": "your_mqtt_host",
         "port": 1883,
+        "username": "your_mqtt_username",
+        "password": "your_mqtt_password",
         "topics": {
             "brightness_topic": "your_brightness_topic",
             "light_topic": "your_light_topic"
@@ -49,6 +51,36 @@
             "5": {
                 "min": 401,
                 "max": 1000
+            }
+        }
+    },
+    "plugins": {
+        "enabled": [
+            "auto_mode.AutoModePlugin"
+        ],
+        "auto_mode": {
+            "enabled": false,
+            "check_interval": 60,
+            "schedule": {
+                "06:00": {
+                    "state": "ON",
+                    "brightness": 3
+                },
+                "12:00": {
+                    "state": "ON",
+                    "brightness": 5
+                },
+                "18:00": {
+                    "state": "ON",
+                    "brightness": 4
+                },
+                "22:00": {
+                    "state": "ON",
+                    "brightness": 2
+                },
+                "23:30": {
+                    "state": "OFF"
+                }
             }
         }
     }
