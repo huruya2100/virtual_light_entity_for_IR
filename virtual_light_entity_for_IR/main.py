@@ -51,6 +51,9 @@ class VirtualLightCore:
         self.register_event_handler(
             "state_changed", self.light_controller.handle_state_change
         )
+        self.register_event_handler(
+            "brightness_level_changed", self.light_controller.handle_brightness_level_change
+        )
 
         # 設定変更イベントを登録
         self.register_event_handler("config_changed", self.handle_config_changed)
