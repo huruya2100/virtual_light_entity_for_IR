@@ -2,12 +2,11 @@ import threading
 import logging
 import time
 from typing import Dict, Any, Optional, List, Union
-from abc import ABC, abstractmethod
-
-from .config import Config
-from .mqtt import BaseMQTTClient, MQTTPublisher
-from .light_controller import LightController
-from .homeassistant import HomeAssistantClient
+import json
+from config import Config
+from mqtt import BaseMQTTClient, MQTTPublisher
+from light_controller import LightController
+from homeassistant import HomeAssistantClient
 
 # ロガー設定
 logging.basicConfig(
@@ -15,15 +14,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ハンドラの設定
+console_handler = logging.StreamHandler()
+
 CONFIG_PATH = "settings.json"
 
 
 class VirtualLightCore:
     """仮想ライト制御のコアクラス"""
+
     def __init__(self, config_path: str):
         self.config_path = config_path
         self.config = Config(config_path)
-        self.plugins: List[Plugin] = []
         self.event_handlers: Dict[str, List[callable]] = {}
         self.setup()
 
@@ -33,25 +35,25 @@ class VirtualLightCore:
         ha_url = self.config.get("HomeAssistant.url")
         ha_token = self.config.get("HomeAssistant.token")
         ha_client = HomeAssistantClient(ha_url, ha_token)
-        
+
         # ライトコントローラーの初期化
         self.light_controller = LightController(self.config, ha_client)
-        
+
         # MQTTクライアントの初期化
-        self.mqtt_client = MQTTVirtualLightClient(self.config, self.light_controller, self)
-        
+        self.mqtt_client = MQTTVirtualLightClient(
+            self.config, self.light_controller, self
+        )
+
         # イベントハンドラの登録
-        self.register_event_handler("brightness_changed", self.light_controller.handle_brightness_change)
-        self.register_event_handler("state_changed", self.light_controller.handle_state_change)
-        
+        self.register_event_handler(
+            "brightness_changed", self.light_controller.handle_brightness_change
+        )
+        self.register_event_handler(
+            "state_changed", self.light_controller.handle_state_change
+        )
+
         # 設定変更イベントを登録
         self.register_event_handler("config_changed", self.handle_config_changed)
-
-    def register_plugin(self, plugin: 'Plugin') -> None:
-        """プラグインを登録する"""
-        plugin.init(self)
-        self.plugins.append(plugin)
-        logger.info(f"プラグイン '{plugin.name}' を登録しました")
 
     def register_event_handler(self, event_name: str, handler: callable) -> None:
         """イベントハンドラを登録する"""
@@ -66,12 +68,15 @@ class VirtualLightCore:
                 try:
                     handler(**kwargs)
                 except Exception as e:
-                    logger.error(f"イベントハンドラ実行中にエラーが発生しました: {e}", exc_info=True)
+                    logger.error(
+                        f"イベントハンドラ実行中にエラーが発生しました: {e}",
+                        exc_info=True,
+                    )
 
     def handle_config_changed(self, key: str, value: Any) -> None:
         """
         設定変更イベントのハンドラ
-        
+
         Args:
             key (str): 設定キー
             value (Any): 設定値
@@ -83,24 +88,10 @@ class VirtualLightCore:
     def run(self) -> None:
         """メインループを実行"""
         logger.info("仮想ライトエンティティを起動しています...")
-        
-        # プラグインマネージャを初期化
-        from .plugins import PluginManager
-        plugin_manager = PluginManager(self)
-        
-        # 有効なプラグインをロード
-        plugin_manager.load_enabled_plugins()
-        
-        # すべてのプラグインを起動
-        for plugin in self.plugins:
-            try:
-                plugin.start()
-            except Exception as e:
-                logger.error(f"プラグイン '{plugin.name}' の起動に失敗しました: {e}")
-        
+
         # MQTTクライアントを起動
         self.mqtt_client.connect()
-        
+
         try:
             # メインループ - 1秒ごとに状態チェックなど
             while True:
@@ -113,114 +104,143 @@ class VirtualLightCore:
     def shutdown(self) -> None:
         """プログラムをシャットダウン"""
         logger.info("シャットダウン中...")
-        
-        # プラグインを停止
-        for plugin in reversed(self.plugins):
-            try:
-                plugin.stop()
-            except Exception as e:
-                logger.error(f"プラグイン '{plugin.name}' の停止に失敗しました: {e}")
-        
+
         # MQTTクライアントを停止
         self.mqtt_client.disconnect()
 
 
-class Plugin(ABC):
-    """プラグインの基底クラス"""
-    
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """プラグイン名"""
-        pass
-    
-    @abstractmethod
-    def init(self, core: VirtualLightCore) -> None:
-        """初期化"""
-        pass
-    
-    @abstractmethod
-    def start(self) -> None:
-        """起動"""
-        pass
-    
-    @abstractmethod
-    def stop(self) -> None:
-        """停止"""
-        pass
-
-
 class MQTTVirtualLightClient(BaseMQTTClient):
     """仮想ライト用MQTTクライアント"""
-    def __init__(self, config: Config, light_controller: LightController, core: VirtualLightCore):
+
+    def __init__(
+        self, config: Config, light_controller: LightController, core: VirtualLightCore
+    ):
         super().__init__(config)
-        self.brightness_topic = self.config.get("mqtt.topics.brightness_topic")
-        self.light_topic = self.config.get("mqtt.topics.light_topic")
+        self.config = config
         self.light_controller = light_controller
         self.core = core
+
+        # ライトのトピックマッピングを作成
+        self.light_topics = {}
+        self.brightness_topics = {}
+
+        for light in self.light_controller.get_all_lights():
+            # ライト制御トピック
+            light_topic = light.mqtt_light_topic
+            if light_topic:
+                self.light_topics[f"{light_topic}/set"] = light.light_id
+                logger.info(
+                    f"ライト '{light.light_id}' の制御トピックを登録: {light_topic}/set"
+                )
+
+            # 照度トピック
+            brightness_topic = light.mqtt_brightness_topic
+            if brightness_topic:
+                self.brightness_topics[brightness_topic] = light.light_id
+                logger.info(
+                    f"ライト '{light.light_id}' の照度トピックを登録: {brightness_topic}"
+                )
 
     def on_connect(self, client, userdata, flags, rc, properties=None) -> None:
         """接続時のコールバック関数"""
         super().on_connect(client, userdata, flags, rc, properties)
-        
-        # トピックの購読
-        logger.info(f"トピックを購読: {self.brightness_topic}")
-        client.subscribe(self.brightness_topic)
-        logger.info(f"トピックを購読: {self.light_topic}/set")
-        client.subscribe(self.light_topic + "/set")
+
+        # 各ライトの照度トピックを購読
+        if not self.brightness_topics:
+            logger.warning("照度トピックが設定されていません")
+        else:
+            for topic in self.brightness_topics.keys():
+                logger.info(f"照度トピックを購読: {topic}")
+                client.subscribe(topic)
+
+        # 各ライトの制御トピックを購読
+        if not self.light_topics:
+            logger.warning("ライト制御トピックが設定されていません")
+        else:
+            for topic in self.light_topics.keys():
+                logger.info(f"ライト制御トピックを購読: {topic}")
+                client.subscribe(topic)
 
     def on_message(self, client, userdata, msg) -> None:
         """MQTTメッセージ受信時のコールバック関数"""
         super().on_message(client, userdata, msg)
-        
+
         try:
-            if msg.topic == self.brightness_topic:
-                self._handle_brightness_message(msg)
-            elif msg.topic == self.light_topic + "/set":
-                self._handle_light_set_message(msg)
+            # 照度トピックのメッセージ処理
+            if msg.topic in self.brightness_topics:
+                self._handle_brightness_message(msg, self.brightness_topics[msg.topic])
+            # ライト制御トピックのメッセージ処理
+            elif msg.topic in self.light_topics:
+                self._handle_light_set_message(msg, self.light_topics[msg.topic])
         except Exception as e:
             logger.error(f"メッセージ処理中にエラーが発生しました: {e}", exc_info=True)
 
-    def _handle_brightness_message(self, msg) -> None:
+    def _handle_brightness_message(
+        self, msg, specific_light_id: Optional[str] = None
+    ) -> None:
         """照度センサーからのメッセージを処理"""
         try:
             payload = msg.payload.decode("utf-8")
-            logger.info(f"照度データを受信: {payload}")
-            
-            # 小数点以下の桁数を丸める
-            brightness = round(float(payload), 1)
-            
-            # イベントを発火
-            self.core.trigger_event("brightness_changed", brightness=brightness)
-            
-        except ValueError:
-            logger.error(f"不正な照度データを受信しました: {payload}")
+            logger.info(
+                f"照度データを受信: {payload}"
+                + (f" (ライトID: {specific_light_id})" if specific_light_id else "")
+            )
+
+            # 文字列から数値に変換
+            try:
+                lux_value = float(payload)
+            except ValueError:
+                logger.error(f"照度データを数値に変換できませんでした: {payload}")
+                return
+
+            # ライトIDが指定されている場合はそのIDを使用
+            light_id = specific_light_id
+
+            if light_id:
+                logger.info(f"照度データを処理: {lux_value}lx (ライトID: {light_id})")
+                # 生の照度値をイベントで渡す
+                self.core.trigger_event(
+                    "brightness_changed", brightness=lux_value, light_id=light_id
+                )
+            else:
+                logger.warning("照度データを受信しましたが、対象のライトIDが指定されていません")
+
         except Exception as e:
             logger.error(f"照度レベルの処理に失敗しました: {e}", exc_info=True)
 
-    def _handle_light_set_message(self, msg) -> None:
+    def _handle_light_set_message(self, msg, light_id: str) -> None:
         """ライト制御メッセージを処理"""
         try:
-            import json
             payload = json.loads(msg.payload.decode("utf-8"))
-            logger.debug(f"ライト制御メッセージを受信: {payload}")
-            
+            logger.debug(
+                f"ライト制御メッセージを受信: {payload} (ライトID: {light_id})"
+            )
+
+            # ペイロードにlight_idを追加
+            payload["light_id"] = light_id
+
             # イベントを発火
-            self.core.trigger_event("light_command", command=payload)
-            
+            self.core.trigger_event("light_command", command=payload, light_id=light_id)
+
             has_state = "state" in payload
             has_brightness = "brightness" in payload
-            
+
             if has_state:
                 state = payload["state"].upper()
-                self.core.trigger_event("state_changed", state=state)
-            
+                self.core.trigger_event("state_changed", state=state, light_id=light_id)
+
             if has_brightness:
                 brightness = int(payload["brightness"])
-                self.core.trigger_event("brightness_level_changed", brightness_level=brightness)
-                
+                self.core.trigger_event(
+                    "brightness_level_changed",
+                    brightness_level=brightness,
+                    light_id=light_id,
+                )
+
         except json.JSONDecodeError:
-            logger.error(f"不正なJSONフォーマットを受信しました: {msg.payload.decode('utf-8')}")
+            logger.error(
+                f"不正なJSONフォーマットを受信しました: {msg.payload.decode('utf-8')}"
+            )
         except Exception as e:
             logger.error(f"ライト制御コマンドの処理に失敗しました: {e}", exc_info=True)
 
@@ -231,7 +251,9 @@ def main():
         core = VirtualLightCore(CONFIG_PATH)
         core.run()
     except Exception as e:
-        logger.critical(f"プログラム実行中に重大なエラーが発生しました: {e}", exc_info=True)
+        logger.critical(
+            f"プログラム実行中に重大なエラーが発生しました: {e}", exc_info=True
+        )
 
 
 if __name__ == "__main__":
