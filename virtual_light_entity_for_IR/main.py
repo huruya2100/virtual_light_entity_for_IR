@@ -301,6 +301,12 @@ class Light:
     def change_virtual_state_state(self, new_state: str):
         """
         バーチャルなon/off状態をリアルな状態に反映する関数
+
+        params:
+        new_state: str: 新しい状態
+
+        example:
+        new_state = "ON"
         """
         old_state = self.state
 
@@ -383,6 +389,14 @@ class Light:
         """
         バーチャルな照度をリアルな照度に反映する関数
 
+        params:
+        new_state: Dict[str, Any]: 新しい状態
+
+        example:
+        new_state = {
+            "state": "ON",
+            "brightness": 3
+        }
         """
 
         old_level = self.brightness_level
