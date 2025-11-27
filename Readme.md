@@ -39,10 +39,24 @@ dockerを使うとラク。
 
 ```sh
 cp settings.sample.json settings.json
-docker build --no-cache
+docker build --no-cache .
 docker compose up -d
 ```
 
+## 開発環境
+
+uvを使用してPython依存関係を管理しています。
+
+```sh
+# 依存関係のインストール
+uv sync
+
+# アプリケーションの実行
+uv run python virtual_light_entity_for_IR/main.py
+
+# テストの実行
+uv run pytest
+```
 ## 構造図
 
 ```mermaid
