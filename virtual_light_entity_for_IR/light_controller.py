@@ -4,7 +4,7 @@
 
 import logging
 import time
-from typing import Dict, Any, Optional, Tuple, List, Union
+from typing import Dict, Any, Optional, Tuple, List
 
 from config import Config
 from homeassistant import HomeAssistantClient
@@ -569,7 +569,9 @@ class LightController:
         except Exception as e:
             logger.error(f"状態変更の処理に失敗しました: {e}", exc_info=True)
 
-    def handle_brightness_level_change(self, brightness_level: int, light_id: Optional[str] = None) -> None:
+    def handle_brightness_level_change(
+        self, brightness_level: int, light_id: Optional[str] = None
+    ) -> None:
         """
         明るさ変更イベントのハンドラ (外部からの明るさコマンド)
 
@@ -581,13 +583,21 @@ class LightController:
             if light_id:
                 light = self.get_light(light_id)
                 if light:
-                    logger.info(f"明るさ変更を処理: {brightness_level} (ライトID: {light_id})")
-                    light.change_virtual_state_brightness(brightness_level, force_update=True)
+                    logger.info(
+                        f"明るさ変更を処理: {brightness_level} (ライトID: {light_id})"
+                    )
+                    light.change_virtual_state_brightness(
+                        brightness_level, force_update=True
+                    )
                 else:
                     logger.warning(f"ライト '{light_id}' が見つかりません")
             else:
                 for current_light_id, light in self.lights.items():
-                    logger.info(f"明るさ変更を処理: {brightness_level} (ライトID: {current_light_id})")
-                    light.change_virtual_state_brightness(brightness_level, force_update=True)
+                    logger.info(
+                        f"明るさ変更を処理: {brightness_level} (ライトID: {current_light_id})"
+                    )
+                    light.change_virtual_state_brightness(
+                        brightness_level, force_update=True
+                    )
         except Exception as e:
             logger.error(f"明るさ変更の処理に失敗しました: {e}", exc_info=True)

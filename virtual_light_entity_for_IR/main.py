@@ -1,10 +1,9 @@
-import threading
 import logging
 import time
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List
 import json
 from config import Config
-from mqtt import BaseMQTTClient, MQTTPublisher
+from mqtt import BaseMQTTClient
 from light_controller import LightController
 from homeassistant import HomeAssistantClient
 
@@ -52,7 +51,8 @@ class VirtualLightCore:
             "state_changed", self.light_controller.handle_state_change
         )
         self.register_event_handler(
-            "brightness_level_changed", self.light_controller.handle_brightness_level_change
+            "brightness_level_changed",
+            self.light_controller.handle_brightness_level_change,
         )
 
         # 設定変更イベントを登録
@@ -206,7 +206,9 @@ class MQTTVirtualLightClient(BaseMQTTClient):
                     "brightness_changed", brightness=lux_value, light_id=light_id
                 )
             else:
-                logger.warning("照度データを受信しましたが、対象のライトIDが指定されていません")
+                logger.warning(
+                    "照度データを受信しましたが、対象のライトIDが指定されていません"
+                )
 
         except Exception as e:
             logger.error(f"照度レベルの処理に失敗しました: {e}", exc_info=True)

@@ -23,8 +23,11 @@ test = [
 
 [tool.uv]
 dev-dependencies = [
+    "black>=24.8.0",
+    "mypy>=1.14.1",
     "pytest>=6.0.0",
     "pytest-cov>=2.0.0",
+    "ruff>=0.14.6",
 ]
 
 [project.scripts]

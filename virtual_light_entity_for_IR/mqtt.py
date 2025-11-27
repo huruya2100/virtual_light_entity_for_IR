@@ -5,7 +5,7 @@ MQTTクライアント関連のモジュール
 import json
 import logging
 import time
-from typing import Any, Dict, Optional, Callable, Tuple, Union
+from typing import Any, Dict, Optional, Union
 
 from paho.mqtt import client as mqtt_client
 
@@ -193,7 +193,7 @@ class BaseMQTTClient:
             properties: プロパティ
         """
         if rc == 0:
-            logger.info(f"MQTT接続完了")
+            logger.info("MQTT接続完了")
             self.is_connected = True
         else:
             logger.error(f"MQTT接続失敗 結果コード: {rc}")

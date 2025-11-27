@@ -4,7 +4,7 @@ Home Assistant API通信モジュール
 
 import logging
 import time
-from typing import Dict, Any, Tuple, Optional, List
+from typing import Dict, Any, Tuple
 
 import requests
 

@@ -1,4 +1,3 @@
-import pytest
 import unittest.mock
 from unittest.mock import patch, MagicMock
 from virtual_light_entity_for_IR.main import Config, Light, HomeAssistantClient
