@@ -2,53 +2,127 @@
     "mqtt": {
         "host": "your_mqtt_host",
         "port": 1883,
-        "topics": {
-            "brightness_topic": "your_brightness_topic",
-            "light_topic": "your_light_topic"
-        }
+        "username": "your_mqtt_username",
+        "password": "your_mqtt_password"
     },
     "HomeAssistant": {
         "url": "http://your_home_assistant_url",
-        "token": "your_home_assistant_token",
-        "ir_remote_id": "your_ir_remote_id",
-        "device_id": "your_device_id",
-        "script_name": {
-            "on_service": "your_on_service_script",
-            "off_service": "your_off_service_script",
-            "brightness_up_service": "your_brightness_up_service_script",
-            "brightness_down_service": "your_brightness_down_service_script"
-        }
+        "token": "your_home_assistant_token"
     },
-    "light": {
-        "name": "your_light_name",
-        "model": "your_light_model",
-        "manufacturer": "your_light_manufacturer",
-        "device_unique_id": "your_device_unique_id",
-        "entity_id": "your_entity_id",
-        "lx_to_brightness": {
-            "0": {
-                "min": 0,
-                "max": 100
+    "lights": {
+        "ids": ["living_room", "bedroom", "kitchen"],
+        "living_room": {
+            "mqtt_light_topic": "home/living_room/light",
+            "mqtt_brightness_topic": "home/living_room/brightness",
+            "ir_remote_id": "living_room_ir_remote_id",
+            "device_id": "living_room_device_id",
+            "script_name": {
+                "on_service": "script.living_room_light_on",
+                "off_service": "script.living_room_light_off",
+                "brightness_up_service": "script.living_room_light_brightness_up",
+                "brightness_down_service": "script.living_room_light_brightness_down"
             },
-            "1": {
-                "min": 100,
-                "max": 200
+            "lx_to_brightness": {
+                "0": {
+                    "min": 0,
+                    "max": 90
+                },
+                "1": {
+                    "min": 90,
+                    "max": 180
+                },
+                "2": {
+                    "min": 180,
+                    "max": 270
+                },
+                "3": {
+                    "min": 270,
+                    "max": 360
+                },
+                "4": {
+                    "min": 360,
+                    "max": 500
+                },
+                "5": {
+                    "min": 500,
+                    "max": 1500
+                }
+            }
+        },
+        "bedroom": {
+            "mqtt_light_topic": "home/bedroom/light",
+            "mqtt_brightness_topic": "home/bedroom/brightness",
+            "ir_remote_id": "bedroom_ir_remote_id",
+            "device_id": "bedroom_device_id",
+            "script_name": {
+                "on_service": "script.bedroom_light_on",
+                "off_service": "script.bedroom_light_off",
+                "brightness_up_service": "script.bedroom_light_brightness_up",
+                "brightness_down_service": "script.bedroom_light_brightness_down"
             },
-            "2": {
-                "min": 101,
-                "max": 200
+            "lx_to_brightness": {
+                "0": {
+                    "min": 0,
+                    "max": 90
+                },
+                "1": {
+                    "min": 90,
+                    "max": 180
+                },
+                "2": {
+                    "min": 180,
+                    "max": 270
+                },
+                "3": {
+                    "min": 270,
+                    "max": 360
+                },
+                "4": {
+                    "min": 360,
+                    "max": 500
+                },
+                "5": {
+                    "min": 500,
+                    "max": 1500
+                }
+            }
+        },
+        "kitchen": {
+            "mqtt_light_topic": "home/kitchen/light",
+            "mqtt_brightness_topic": "home/kitchen/brightness",
+            "ir_remote_id": "kitchen_ir_remote_id",
+            "device_id": "kitchen_device_id",
+            "script_name": {
+                "on_service": "script.kitchen_light_on",
+                "off_service": "script.kitchen_light_off",
+                "brightness_up_service": "script.kitchen_light_brightness_up",
+                "brightness_down_service": "script.kitchen_light_brightness_down"
             },
-            "3": {
-                "min": 201,
-                "max": 300
-            },
-            "4": {
-                "min": 301,
-                "max": 400
-            },
-            "5": {
-                "min": 401,
-                "max": 1000
+            "lx_to_brightness": {
+                "0": {
+                    "min": 0,
+                    "max": 90
+                },
+                "1": {
+                    "min": 90,
+                    "max": 180
+                },
+                "2": {
+                    "min": 180,
+                    "max": 270
+                },
+                "3": {
+                    "min": 270,
+                    "max": 360
+                },
+                "4": {
+                    "min": 360,
+                    "max": 500
+                },
+                "5": {
+                    "min": 500,
+                    "max": 1500
+                }
             }
         }
     }
