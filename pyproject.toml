@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "virtual-light-entity-for-ir"
 version = "0.1.0"
 description = "Virtual light entity for infrared control with Home Assistant integration"
-authors = [{name = "Your Name", email = "your.email@example.com"}]
+authors = [{name = "huruya2100"}]
 readme = "Readme.md"
 license = {text = "MIT"}
 requires-python = ">=3.8"
