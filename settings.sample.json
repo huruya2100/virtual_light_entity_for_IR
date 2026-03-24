@@ -92,11 +92,15 @@
             "mqtt_brightness_topic": "home/kitchen/brightness",
             "ir_remote_id": "kitchen_ir_remote_id",
             "device_id": "kitchen_device_id",
-            "script_name": {
-                "on_service": "script.kitchen_light_on",
-                "off_service": "script.kitchen_light_off",
-                "brightness_up_service": "script.kitchen_light_brightness_up",
-                "brightness_down_service": "script.kitchen_light_brightness_down"
+            "ir_sender": "tasmota",
+            "tasmota": {
+                "topic": "tasmota_kitchen_ir",
+                "ir_commands": {
+                    "on_service": {"Protocol": "NEC", "Bits": 32, "Data": "0x00FF30CF"},
+                    "off_service": {"Protocol": "NEC", "Bits": 32, "Data": "0x00FFF807"},
+                    "brightness_up_service": {"Protocol": "NEC", "Bits": 32, "Data": "0x00FFA857"},
+                    "brightness_down_service": {"Protocol": "NEC", "Bits": 32, "Data": "0x00FFE817"}
+                }
             },
             "lx_to_brightness": {
                 "0": {

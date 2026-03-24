@@ -8,6 +8,7 @@ from typing import Dict, Any, Optional, Tuple, List
 
 from config import Config
 from homeassistant import HomeAssistantClient
+from ir_sender import create_ir_sender
 from mqtt import MQTTPublisher
 
 logger = logging.getLogger(__name__)
@@ -57,27 +58,23 @@ class Light:
             f"{self.light_prefix}.device_id"
         ) or self.config.get("HomeAssistant.device_id")
 
+        # IRセンダーを生成（設定の ir_sender キーで方式を選択）
+        self.ir_sender = create_ir_sender(
+            light_id, self.light_prefix, config, home_assistant, mqtt
+        )
+
     def _execute_script(self, script_key: str, repeat: int = 1) -> Tuple[int, str]:
         """
-        設定されたスクリプトを実行
+        IRコマンドを送信
 
         Args:
-            script_key (str): 実行するスクリプトのキー
+            script_key (str): 実行するコマンドのキー
             repeat (int, optional): 繰り返し回数。デフォルトは1
 
         Returns:
             Tuple[int, str]: ステータスコードとレスポンステキスト
         """
-        # ライト固有のスクリプトを使用
-        script_name = self.config.get(f"{self.light_prefix}.script_name.{script_key}")
-
-        if not script_name:
-            logger.error(
-                f"スクリプトが設定されていません: {script_key} (ライトID: {self.light_id})"
-            )
-            return 0, f"Script not configured: {script_key}"
-
-        return self.home_assistant.call_script_service(script_name, repeat)
+        return self.ir_sender.send_command(script_key, repeat)
 
     def _update_state(
         self, new_state: Optional[str] = None, new_brightness: Optional[int] = None
@@ -453,18 +450,34 @@ class LightController:
                     f"ライト '{light_id}' の照度変換テーブル(lx_to_brightness)が設定されていません"
                 )
 
-            # スクリプト設定の確認
-            script_keys = [
+            # IRコマンド設定の確認
+            ir_sender_type = (
+                self.config.get(f"lights.{light_id}.ir_sender") or "homeassistant"
+            )
+            command_keys = [
                 "on_service",
                 "off_service",
                 "brightness_up_service",
                 "brightness_down_service",
             ]
-            for key in script_keys:
-                if not self.config.get(f"lights.{light_id}.script_name.{key}"):
+            if ir_sender_type == "tasmota":
+                if not self.config.get(f"lights.{light_id}.tasmota.topic"):
                     logger.warning(
-                        f"ライト '{light_id}' のスクリプト '{key}' が設定されていません"
+                        f"ライト '{light_id}' のTasmotaトピック(tasmota.topic)が設定されていません"
                     )
+                for key in command_keys:
+                    if not self.config.get(
+                        f"lights.{light_id}.tasmota.ir_commands.{key}"
+                    ):
+                        logger.warning(
+                            f"ライト '{light_id}' のTasmota IRコマンド '{key}' が設定されていません"
+                        )
+            else:
+                for key in command_keys:
+                    if not self.config.get(f"lights.{light_id}.script_name.{key}"):
+                        logger.warning(
+                            f"ライト '{light_id}' のスクリプト '{key}' が設定されていません"
+                        )
 
             self.lights[light_id] = light
             logger.info(f"ライト '{light_id}' を初期化しました")
