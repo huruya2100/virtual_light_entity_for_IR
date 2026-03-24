@@ -41,6 +41,3 @@ packages = ["virtual_light_entity_for_IR"]
 
 [project.scripts]
 virtual-light = "virtual_light_entity_for_IR.main:main"
-
-[tool.hatch.build.targets.wheel]
-packages = ["virtual_light_entity_for_IR"]
