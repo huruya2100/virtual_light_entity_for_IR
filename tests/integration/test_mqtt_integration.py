@@ -12,8 +12,6 @@ from paho.mqtt import client as paho_mqtt
 
 from virtual_light_entity_for_IR.mqtt import BaseMQTTClient, MQTTPublisher
 
-pytestmark = pytest.mark.integration
-
 MQTT_HOST = "localhost"
 MQTT_PORT = 1883
 

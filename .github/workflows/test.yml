@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  unit-test:
+  ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,19 +20,6 @@ jobs:
       - name: Lint with ruff
         run: uv run ruff check .
         continue-on-error: true
-      - name: Run unit tests
-        run: uv run pytest tests/ --ignore=tests/integration -v
-
-  integration-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - name: Install dependencies
-        run: uv sync --all-extras
       - name: Start MQTT broker
         run: |
           docker run -d \
@@ -50,8 +37,8 @@ jobs:
             echo "Waiting... ($i/15)"
             sleep 1
           done
-      - name: Run integration tests
-        run: uv run pytest tests/integration -v -m integration
+      - name: Run tests
+        run: uv run pytest -v
       - name: Stop MQTT broker
         if: always()
         run: docker stop mosquitto && docker rm mosquitto
