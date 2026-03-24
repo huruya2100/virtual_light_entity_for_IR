@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 import json
 from .config import Config
@@ -89,6 +90,29 @@ class VirtualLightCore:
         self.config.set(key, value)
         logger.info("設定を更新しました: %s", key)
 
+    def _publish_heartbeat(self) -> None:
+        """全ライトの現在状態をハートビートトピックに送信"""
+        topic = self.config.get("mqtt.heartbeat_topic")
+        if not topic:
+            return
+
+        lights_state = {
+            light.light_id: {
+                "state": light.state,
+                "brightness": light.brightness_level,
+            }
+            for light in self.light_controller.get_all_lights()
+        }
+
+        payload = {
+            "status": "online",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "lights": lights_state,
+        }
+
+        self.mqtt_client.publish(topic, payload)
+        logger.debug("ハートビートを送信しました: %s", topic)
+
     def run(self) -> None:
         """メインループを実行"""
         logger.info("仮想ライトエンティティを起動しています...")
@@ -96,9 +120,15 @@ class VirtualLightCore:
         # MQTTクライアントを起動
         self.mqtt_client.connect()
 
+        heartbeat_interval = self.config.get("mqtt.heartbeat_interval", 60)
+        last_heartbeat = 0.0
+
         try:
-            # メインループ - 1秒ごとに状態チェックなど
             while True:
+                now = time.monotonic()
+                if now - last_heartbeat >= heartbeat_interval:
+                    self._publish_heartbeat()
+                    last_heartbeat = now
                 time.sleep(1)
         except KeyboardInterrupt:
             logger.info("プログラムが中断されました")

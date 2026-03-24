@@ -3,7 +3,9 @@
         "host": "your_mqtt_host",
         "port": 1883,
         "username": "your_mqtt_username",
-        "password": "your_mqtt_password"
+        "password": "your_mqtt_password",
+        "heartbeat_topic": "virtual_light/heartbeat",
+        "heartbeat_interval": 60
     },
     "HomeAssistant": {
         "url": "http://your_home_assistant_url",
