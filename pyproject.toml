@@ -7,7 +7,6 @@ name = "virtual-light-entity-for-ir"
 version = "0.1.0"
 description = "Virtual light entity for infrared control with Home Assistant integration"
 authors = [{name = "huruya2100"}]
-readme = "Readme.md"
 license = {text = "MIT"}
 requires-python = ">=3.8"
 dependencies = [
@@ -24,6 +23,7 @@ test = [
 [tool.uv]
 dev-dependencies = [
     "black>=24.8.0",
+    "isort>=5.13.2",
     "mypy>=1.14.1",
     "pytest>=6.0.0",
     "pytest-cov>=2.0.0",
@@ -41,3 +41,6 @@ packages = ["virtual_light_entity_for_IR"]
 
 [project.scripts]
 virtual-light = "virtual_light_entity_for_IR.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["virtual_light_entity_for_IR"]
