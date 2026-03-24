@@ -17,4 +17,4 @@ COPY . /virtual_light_entity_for_IR
 RUN uv sync --no-dev --frozen
 
 # Pythonスクリプトを実行
-CMD ["/virtual_light_entity_for_IR/.venv/bin/python", "virtual_light_entity_for_IR/main.py"]
+CMD ["/virtual_light_entity_for_IR/.venv/bin/python", "-m", "virtual_light_entity_for_IR.main"]

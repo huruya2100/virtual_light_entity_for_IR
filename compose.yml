@@ -1,8 +1,5 @@
 version: '3'
 services:
-  virtual_light:
-    build: .
-    network_mode: "host"
   mosquitto:
     image: eclipse-mosquitto:2
     ports:
@@ -11,3 +8,7 @@ services:
       - ./tests/integration/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
     profiles:
       - test
+  virtual_light:
+    build: .
+    network_mode: "host"
+
