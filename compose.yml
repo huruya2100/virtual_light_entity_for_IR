@@ -6,3 +6,12 @@ services:
     volumes:
       - .:/virtual_light_entity_for_IR
     command: ["python", "virtual_light_entity_for_IR/main.py"]
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./tests/integration/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    profiles:
+      - test

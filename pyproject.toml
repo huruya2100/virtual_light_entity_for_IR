@@ -30,6 +30,12 @@ dev-dependencies = [
     "ruff>=0.14.6",
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: integration tests requiring a running MQTT broker (localhost:1883)",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["virtual_light_entity_for_IR"]
 
