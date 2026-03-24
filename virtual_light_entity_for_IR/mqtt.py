@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional, Union
 
 from paho.mqtt import client as mqtt_client
 
-from config import Config
+from .config import Config
 
 logger = logging.getLogger(__name__)
 

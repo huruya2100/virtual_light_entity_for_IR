@@ -1,6 +1,8 @@
 import unittest.mock
 from unittest.mock import patch, MagicMock
-from virtual_light_entity_for_IR.main import Config, Light, HomeAssistantClient
+from virtual_light_entity_for_IR.config import Config
+from virtual_light_entity_for_IR.light_controller import Light
+from virtual_light_entity_for_IR.homeassistant import HomeAssistantClient
 
 CONFIG_PATH = "settings.json"
 
@@ -12,13 +14,15 @@ def test_config_get_nonexistent_key():
         assert config.get("nonexistent.key", "default") == "default"
 
 
-def test_config_load_invalid_json():
+def test_config_load_invalid_json(caplog):
+    import logging
+
     with patch(
         "builtins.open", unittest.mock.mock_open(read_data="invalid json")
-    ), patch("logging.error") as mock_log:
+    ), caplog.at_level(logging.ERROR, logger="virtual_light_entity_for_IR.config"):
         config = Config(CONFIG_PATH)
         assert config.config == {}
-        mock_log.assert_called_once()
+        assert any("JSONフォーマットが無効" in r.message for r in caplog.records)
 
 
 def test_light_convert_brightness_out_of_range():
@@ -29,7 +33,9 @@ def test_light_convert_brightness_out_of_range():
         "5": {"min": 50, "max": 100},
     }
 
-    light = Light(config)
+    ha_mock = MagicMock()
+    mqtt_mock = MagicMock()
+    light = Light("test_light", config, ha_mock, mqtt_mock)
 
     # 範囲外の上限値
     assert light.convert_brightness_to_level(150) == 5
@@ -56,22 +62,16 @@ def test_home_assistant_client_call_script_service_error():
 
 def test_light_change_state_with_api_error():
     config = MagicMock()
-    light = Light(config)
+    ha_mock = MagicMock()
+    mqtt_mock = MagicMock()
+    light = Light("test_light", config, ha_mock, mqtt_mock)
     light.state = "OFF"
 
-    with patch.object(
-        light.home_assistant, "call_script_service"
-    ) as mock_call, patch.object(light.mqtt, "connect"), patch.object(
-        light.mqtt, "publish"
-    ), patch.object(
-        light.mqtt, "disconnect"
-    ), patch(
-        "logging.error"
-    ) as mock_log:
-        mock_call.return_value = (500, "Internal Server Error")
+    with patch.object(light.ir_sender, "send_command") as mock_send:
+        mock_send.return_value = (500, "Internal Server Error")
 
         light.change_virtual_state_state("ON")
 
-        mock_call.assert_called_once()
-        light.mqtt.publish.assert_called_once()
-        assert light.state == "ON"  # 状態は変更されるが、APIエラーはログに記録される
+        mock_send.assert_called_once()
+        # APIエラーの場合、状態は変更されない
+        assert light.state == "OFF"

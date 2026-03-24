@@ -6,10 +6,10 @@ import logging
 import time
 from typing import Dict, Any, Optional, Tuple, List
 
-from config import Config
-from homeassistant import HomeAssistantClient
-from ir_sender import create_ir_sender
-from mqtt import MQTTPublisher
+from .config import Config
+from .homeassistant import HomeAssistantClient
+from .ir_sender import create_ir_sender
+from .mqtt import MQTTPublisher
 
 logger = logging.getLogger(__name__)
 
