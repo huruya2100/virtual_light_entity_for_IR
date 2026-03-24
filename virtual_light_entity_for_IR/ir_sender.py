@@ -10,9 +10,9 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
-    from config import Config
-    from homeassistant import HomeAssistantClient
-    from mqtt import MQTTPublisher
+    from .config import Config
+    from .homeassistant import HomeAssistantClient
+    from .mqtt import MQTTPublisher
 
 logger = logging.getLogger(__name__)
 

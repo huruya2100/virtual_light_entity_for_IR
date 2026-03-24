@@ -5,7 +5,6 @@ from virtual_light_entity_for_IR.config import Config
 from virtual_light_entity_for_IR.light_controller import Light
 from virtual_light_entity_for_IR.homeassistant import HomeAssistantClient
 from virtual_light_entity_for_IR.mqtt import BaseMQTTClient, MQTTPublisher
-import json
 
 CONFIG_PATH = "settings.json"
 
