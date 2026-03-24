@@ -54,7 +54,9 @@ class HomeAssistantIRSender(IRSenderBase):
 
         if not script_name:
             logger.error(
-                f"スクリプトが設定されていません: {command_key} (ライトID: {self.light_id})"
+                "スクリプトが設定されていません: %s (ライトID: %s)",
+                command_key,
+                self.light_id,
             )
             return 0, f"Script not configured: {command_key}"
 
@@ -84,13 +86,15 @@ class TasmotaIRSender(IRSenderBase):
 
         if not tasmota_topic:
             logger.error(
-                f"Tasmotaトピックが設定されていません (ライトID: {self.light_id})"
+                "Tasmotaトピックが設定されていません (ライトID: %s)", self.light_id
             )
             return 0, "Tasmota topic not configured"
 
         if not ir_command:
             logger.error(
-                f"IRコマンドが設定されていません: {command_key} (ライトID: {self.light_id})"
+                "IRコマンドが設定されていません: %s (ライトID: %s)",
+                command_key,
+                self.light_id,
             )
             return 0, f"IR command not configured: {command_key}"
 
@@ -103,12 +107,14 @@ class TasmotaIRSender(IRSenderBase):
                     time.sleep(0.5)
 
             logger.info(
-                f"TasmotaにIRコマンドを送信しました: {command_key} × {repeat} "
-                f"(ライトID: {self.light_id})"
+                "TasmotaにIRコマンドを送信しました: %s × %s (ライトID: %s)",
+                command_key,
+                repeat,
+                self.light_id,
             )
             return 200, "OK"
         except Exception as e:
-            logger.error(f"Tasmota IRコマンド送信に失敗しました: {e}", exc_info=True)
+            logger.error("Tasmota IRコマンド送信に失敗しました: %s", e, exc_info=True)
             return 0, str(e)
 
 
@@ -135,8 +141,8 @@ def create_ir_sender(
     sender_type = config.get(f"{light_prefix}.ir_sender") or "homeassistant"
 
     if sender_type == "tasmota":
-        logger.info(f"ライト '{light_id}' にTasmota IRセンダーを使用します")
+        logger.info("ライト '%s' にTasmota IRセンダーを使用します", light_id)
         return TasmotaIRSender(light_id, light_prefix, config, mqtt)
     else:
-        logger.info(f"ライト '{light_id}' にHome Assistant IRセンダーを使用します")
+        logger.info("ライト '%s' にHome Assistant IRセンダーを使用します", light_id)
         return HomeAssistantIRSender(light_id, light_prefix, config, home_assistant)

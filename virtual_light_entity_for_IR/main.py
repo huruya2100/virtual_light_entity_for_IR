@@ -72,7 +72,8 @@ class VirtualLightCore:
                     handler(**kwargs)
                 except Exception as e:
                     logger.error(
-                        f"イベントハンドラ実行中にエラーが発生しました: {e}",
+                        "イベントハンドラ実行中にエラーが発生しました: %s",
+                        e,
                         exc_info=True,
                     )
 
@@ -86,7 +87,7 @@ class VirtualLightCore:
         """
         # 設定を更新
         self.config.set(key, value)
-        logger.info(f"設定を更新しました: {key}")
+        logger.info("設定を更新しました: %s", key)
 
     def run(self) -> None:
         """メインループを実行"""
@@ -133,7 +134,9 @@ class MQTTVirtualLightClient(BaseMQTTClient):
             if light_topic:
                 self.light_topics[f"{light_topic}/set"] = light.light_id
                 logger.info(
-                    f"ライト '{light.light_id}' の制御トピックを登録: {light_topic}/set"
+                    "ライト '%s' の制御トピックを登録: %s/set",
+                    light.light_id,
+                    light_topic,
                 )
 
             # 照度トピック
@@ -141,7 +144,9 @@ class MQTTVirtualLightClient(BaseMQTTClient):
             if brightness_topic:
                 self.brightness_topics[brightness_topic] = light.light_id
                 logger.info(
-                    f"ライト '{light.light_id}' の照度トピックを登録: {brightness_topic}"
+                    "ライト '%s' の照度トピックを登録: %s",
+                    light.light_id,
+                    brightness_topic,
                 )
 
     def on_connect(self, client, userdata, flags, rc, properties=None) -> None:
@@ -153,7 +158,7 @@ class MQTTVirtualLightClient(BaseMQTTClient):
             logger.warning("照度トピックが設定されていません")
         else:
             for topic in self.brightness_topics.keys():
-                logger.info(f"照度トピックを購読: {topic}")
+                logger.info("照度トピックを購読: %s", topic)
                 client.subscribe(topic)
 
         # 各ライトの制御トピックを購読
@@ -161,7 +166,7 @@ class MQTTVirtualLightClient(BaseMQTTClient):
             logger.warning("ライト制御トピックが設定されていません")
         else:
             for topic in self.light_topics.keys():
-                logger.info(f"ライト制御トピックを購読: {topic}")
+                logger.info("ライト制御トピックを購読: %s", topic)
                 client.subscribe(topic)
 
     def on_message(self, client, userdata, msg) -> None:
@@ -176,7 +181,7 @@ class MQTTVirtualLightClient(BaseMQTTClient):
             elif msg.topic in self.light_topics:
                 self._handle_light_set_message(msg, self.light_topics[msg.topic])
         except Exception as e:
-            logger.error(f"メッセージ処理中にエラーが発生しました: {e}", exc_info=True)
+            logger.error("メッセージ処理中にエラーが発生しました: %s", e, exc_info=True)
 
     def _handle_brightness_message(
         self, msg, specific_light_id: Optional[str] = None
@@ -184,23 +189,27 @@ class MQTTVirtualLightClient(BaseMQTTClient):
         """照度センサーからのメッセージを処理"""
         try:
             payload = msg.payload.decode("utf-8")
-            logger.info(
-                f"照度データを受信: {payload}"
-                + (f" (ライトID: {specific_light_id})" if specific_light_id else "")
-            )
+            if specific_light_id:
+                logger.info(
+                    "照度データを受信: %s (ライトID: %s)", payload, specific_light_id
+                )
+            else:
+                logger.info("照度データを受信: %s", payload)
 
             # 文字列から数値に変換
             try:
                 lux_value = float(payload)
             except ValueError:
-                logger.error(f"照度データを数値に変換できませんでした: {payload}")
+                logger.error("照度データを数値に変換できませんでした: %s", payload)
                 return
 
             # ライトIDが指定されている場合はそのIDを使用
             light_id = specific_light_id
 
             if light_id:
-                logger.info(f"照度データを処理: {lux_value}lx (ライトID: {light_id})")
+                logger.info(
+                    "照度データを処理: %slx (ライトID: %s)", lux_value, light_id
+                )
                 # 生の照度値をイベントで渡す
                 self.core.trigger_event(
                     "brightness_changed", brightness=lux_value, light_id=light_id
@@ -211,14 +220,14 @@ class MQTTVirtualLightClient(BaseMQTTClient):
                 )
 
         except Exception as e:
-            logger.error(f"照度レベルの処理に失敗しました: {e}", exc_info=True)
+            logger.error("照度レベルの処理に失敗しました: %s", e, exc_info=True)
 
     def _handle_light_set_message(self, msg, light_id: str) -> None:
         """ライト制御メッセージを処理"""
         try:
             payload = json.loads(msg.payload.decode("utf-8"))
             logger.debug(
-                f"ライト制御メッセージを受信: {payload} (ライトID: {light_id})"
+                "ライト制御メッセージを受信: %s (ライトID: %s)", payload, light_id
             )
 
             # ペイロードにlight_idを追加
@@ -244,10 +253,10 @@ class MQTTVirtualLightClient(BaseMQTTClient):
 
         except json.JSONDecodeError:
             logger.error(
-                f"不正なJSONフォーマットを受信しました: {msg.payload.decode('utf-8')}"
+                "不正なJSONフォーマットを受信しました: %s", msg.payload.decode("utf-8")
             )
         except Exception as e:
-            logger.error(f"ライト制御コマンドの処理に失敗しました: {e}", exc_info=True)
+            logger.error("ライト制御コマンドの処理に失敗しました: %s", e, exc_info=True)
 
 
 def main():
@@ -257,7 +266,7 @@ def main():
         core.run()
     except Exception as e:
         logger.critical(
-            f"プログラム実行中に重大なエラーが発生しました: {e}", exc_info=True
+            "プログラム実行中に重大なエラーが発生しました: %s", e, exc_info=True
         )
 
 
