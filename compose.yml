@@ -11,4 +11,5 @@ services:
   virtual_light:
     build: .
     network_mode: "host"
+    restart: always
 
