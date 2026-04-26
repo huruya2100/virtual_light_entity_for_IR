@@ -4,7 +4,7 @@
 
 import logging
 import time
-from typing import Dict, Any, Optional, Tuple, List
+from typing import Any, Dict, List, Optional, Tuple
 
 from .config import Config
 from .homeassistant import HomeAssistantClient

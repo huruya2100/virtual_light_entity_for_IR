@@ -8,7 +8,6 @@ MQTT統合テスト
 import json
 import time
 
-import pytest
 from paho.mqtt import client as paho_mqtt
 
 from virtual_light_entity_for_IR.mqtt import BaseMQTTClient, MQTTPublisher

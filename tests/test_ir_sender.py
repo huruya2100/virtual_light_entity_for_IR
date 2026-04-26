@@ -3,11 +3,10 @@ ir_sender モジュールのテスト
 """
 
 from unittest.mock import MagicMock, patch
-from virtual_light_entity_for_IR.ir_sender import (
-    HomeAssistantIRSender,
-    TasmotaIRSender,
-    create_ir_sender,
-)
+
+from virtual_light_entity_for_IR.ir_sender import (HomeAssistantIRSender,
+                                                   TasmotaIRSender,
+                                                   create_ir_sender)
 
 # HomeAssistantIRSender のテスト
 

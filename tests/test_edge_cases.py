@@ -1,8 +1,9 @@
 import unittest.mock
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from virtual_light_entity_for_IR.config import Config
-from virtual_light_entity_for_IR.light_controller import Light
 from virtual_light_entity_for_IR.homeassistant import HomeAssistantClient
+from virtual_light_entity_for_IR.light_controller import Light
 
 CONFIG_PATH = "settings.json"
 
