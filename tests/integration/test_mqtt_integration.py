@@ -30,6 +30,14 @@ def _make_config(host=MQTT_HOST, port=MQTT_PORT):
     return config
 
 
+def _make_subscriber(client_id):
+    return paho_mqtt.Client(
+        callback_api_version=paho_mqtt.CallbackAPIVersion.VERSION2,
+        client_id=client_id,
+        protocol=paho_mqtt.MQTTv5,
+    )
+
+
 # --- BaseMQTTClient ---
 
 
@@ -50,7 +58,7 @@ class TestBaseMQTTClientIntegration:
         collector._messages.clear()
 
         # サブスクライブしてからパブリッシュ
-        sub_client = paho_mqtt.Client(client_id="sub_base", protocol=paho_mqtt.MQTTv5)
+        sub_client = _make_subscriber("sub_base")
         sub_client.on_message = collector.on_message
         sub_client.connect(MQTT_HOST, MQTT_PORT)
         sub_client.subscribe(topic)
@@ -75,7 +83,7 @@ class TestBaseMQTTClientIntegration:
         topic = "test/base/json"
         collector._messages.clear()
 
-        sub_client = paho_mqtt.Client(client_id="sub_json", protocol=paho_mqtt.MQTTv5)
+        sub_client = _make_subscriber("sub_json")
         sub_client.on_message = collector.on_message
         sub_client.connect(MQTT_HOST, MQTT_PORT)
         sub_client.subscribe(topic)
@@ -106,7 +114,7 @@ class TestMQTTPublisherIntegration:
         topic = "test/publisher/safe"
         collector._messages.clear()
 
-        sub_client = paho_mqtt.Client(client_id="sub_safe", protocol=paho_mqtt.MQTTv5)
+        sub_client = _make_subscriber("sub_safe")
         sub_client.on_message = collector.on_message
         sub_client.connect(MQTT_HOST, MQTT_PORT)
         sub_client.subscribe(topic)
@@ -134,9 +142,7 @@ class TestMQTTPublisherIntegration:
         topic = "test/publisher/light_state"
         collector._messages.clear()
 
-        sub_client = paho_mqtt.Client(
-            client_id="sub_light_state", protocol=paho_mqtt.MQTTv5
-        )
+        sub_client = _make_subscriber("sub_light_state")
         sub_client.on_message = collector.on_message
         sub_client.connect(MQTT_HOST, MQTT_PORT)
         sub_client.subscribe(topic)
@@ -164,9 +170,7 @@ class TestMQTTPublisherIntegration:
         topic = "test/publisher/light_off"
         collector._messages.clear()
 
-        sub_client = paho_mqtt.Client(
-            client_id="sub_light_off", protocol=paho_mqtt.MQTTv5
-        )
+        sub_client = _make_subscriber("sub_light_off")
         sub_client.on_message = collector.on_message
         sub_client.connect(MQTT_HOST, MQTT_PORT)
         sub_client.subscribe(topic)
@@ -194,7 +198,7 @@ class TestMQTTPublisherIntegration:
         topic = "test/publisher/auto_connect"
         collector._messages.clear()
 
-        sub_client = paho_mqtt.Client(client_id="sub_auto", protocol=paho_mqtt.MQTTv5)
+        sub_client = _make_subscriber("sub_auto")
         sub_client.on_message = collector.on_message
         sub_client.connect(MQTT_HOST, MQTT_PORT)
         sub_client.subscribe(topic)

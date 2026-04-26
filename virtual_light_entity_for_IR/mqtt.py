@@ -38,7 +38,11 @@ class BaseMQTTClient:
     def setup_client(self) -> None:
         """MQTTクライアントの初期設定"""
         self.client = mqtt_client.Client(
-            client_id="", userdata=None, protocol=mqtt_client.MQTTv5, transport="tcp"
+            callback_api_version=mqtt_client.CallbackAPIVersion.VERSION2,
+            client_id="",
+            userdata=None,
+            protocol=mqtt_client.MQTTv5,
+            transport="tcp",
         )
 
         username = self.config.get("mqtt.username")
@@ -50,18 +54,27 @@ class BaseMQTTClient:
         self.client.on_message = self.on_message
         self.client.on_disconnect = self.on_disconnect
 
-    def on_disconnect(self, client, userdata, rc, properties=None) -> None:
+    def on_disconnect(
+        self, client, userdata, disconnect_flags, rc, properties=None
+    ) -> None:
         """
         切断時のコールバック
 
         Args:
             client: MQTTクライアント
             userdata: ユーザデータ
+            disconnect_flags: 切断フラグ
             rc: 結果コード
             properties: プロパティ
         """
         logger.info("MQTTブローカーから切断されました")
-        logger.debug("Client: %s, Userdata: %s, Result code: %s", client, userdata, rc)
+        logger.debug(
+            "Client: %s, Userdata: %s, Disconnect flags: %s, Result code: %s",
+            client,
+            userdata,
+            disconnect_flags,
+            rc,
+        )
         self.is_connected = False
 
         # 予期せぬ切断の場合は再接続を試みる

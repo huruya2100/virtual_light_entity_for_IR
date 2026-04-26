@@ -53,6 +53,7 @@ def collector(mqtt_broker):
     col = MessageCollector()
 
     client = paho_mqtt.Client(
+        callback_api_version=paho_mqtt.CallbackAPIVersion.VERSION2,
         client_id="test_collector",
         protocol=paho_mqtt.MQTTv5,
     )
