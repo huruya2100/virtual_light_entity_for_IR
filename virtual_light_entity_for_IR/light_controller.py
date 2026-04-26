@@ -4,11 +4,12 @@
 
 import logging
 import time
-from typing import Dict, Any, Optional, Tuple, List
+from typing import Any, Dict, List, Optional, Tuple
 
-from config import Config
-from homeassistant import HomeAssistantClient
-from mqtt import MQTTPublisher
+from .config import Config
+from .homeassistant import HomeAssistantClient
+from .ir_sender import create_ir_sender
+from .mqtt import MQTTPublisher
 
 logger = logging.getLogger(__name__)
 
@@ -57,27 +58,23 @@ class Light:
             f"{self.light_prefix}.device_id"
         ) or self.config.get("HomeAssistant.device_id")
 
+        # IRセンダーを生成（設定の ir_sender キーで方式を選択）
+        self.ir_sender = create_ir_sender(
+            light_id, self.light_prefix, config, home_assistant, mqtt
+        )
+
     def _execute_script(self, script_key: str, repeat: int = 1) -> Tuple[int, str]:
         """
-        設定されたスクリプトを実行
+        IRコマンドを送信
 
         Args:
-            script_key (str): 実行するスクリプトのキー
+            script_key (str): 実行するコマンドのキー
             repeat (int, optional): 繰り返し回数。デフォルトは1
 
         Returns:
             Tuple[int, str]: ステータスコードとレスポンステキスト
         """
-        # ライト固有のスクリプトを使用
-        script_name = self.config.get(f"{self.light_prefix}.script_name.{script_key}")
-
-        if not script_name:
-            logger.error(
-                f"スクリプトが設定されていません: {script_key} (ライトID: {self.light_id})"
-            )
-            return 0, f"Script not configured: {script_key}"
-
-        return self.home_assistant.call_script_service(script_name, repeat)
+        return self.ir_sender.send_command(script_key, repeat)
 
     def _update_state(
         self, new_state: Optional[str] = None, new_brightness: Optional[int] = None
@@ -104,9 +101,11 @@ class Light:
         }
         if self.mqtt_light_topic:
             self.mqtt.safe_publish(f"{self.mqtt_light_topic}/state", payload)
-            logger.debug(f"ライト状態を更新しました: {payload}")
+            logger.debug("ライト状態を更新しました: %s", payload)
         else:
-            logger.warning(f"ライト {self.light_id} にMQTTトピックが設定されていません")
+            logger.warning(
+                "ライト %s にMQTTトピックが設定されていません", self.light_id
+            )
 
     def turn_on(self) -> bool:
         """
@@ -115,22 +114,22 @@ class Light:
         Returns:
             bool: 成功したかどうか
         """
-        logger.info(f"ライト {self.light_id} をONにします")
+        logger.info("ライト %s をONにします", self.light_id)
 
         if self.state == "ON":
-            logger.debug(f"ライト {self.light_id} は既にONです")
+            logger.debug("ライト %s は既にONです", self.light_id)
             return True
 
         status_code, response_text = self._execute_script("on_service")
         success = status_code == 200
 
         if success:
-            logger.info(f"ライト {self.light_id} をONにしました")
+            logger.info("ライト %s をONにしました", self.light_id)
             self.state = "ON"
             self._update_state("ON")
         else:
             logger.error(
-                f"ライト {self.light_id} をONにできませんでした: {response_text}"
+                "ライト %s をONにできませんでした: %s", self.light_id, response_text
             )
 
         return success
@@ -142,23 +141,23 @@ class Light:
         Returns:
             bool: 成功したかどうか
         """
-        logger.info(f"ライト {self.light_id} をOFFにします")
+        logger.info("ライト %s をOFFにします", self.light_id)
 
         if self.state == "OFF":
-            logger.debug(f"ライト {self.light_id} は既にOFFです")
+            logger.debug("ライト %s は既にOFFです", self.light_id)
             return True
 
         status_code, response_text = self._execute_script("off_service")
         success = status_code == 200
 
         if success:
-            logger.info(f"ライト {self.light_id} をOFFにしました")
+            logger.info("ライト %s をOFFにしました", self.light_id)
             self.state = "OFF"
             self.brightness_level = 0
             self._update_state("OFF", 0)
         else:
             logger.error(
-                f"ライト {self.light_id} をOFFにできませんでした: {response_text}"
+                "ライト %s をOFFにできませんでした: %s", self.light_id, response_text
             )
 
         return success
@@ -177,12 +176,13 @@ class Light:
 
         if not lx_to_brightness:
             logger.error(
-                f"ライト {self.light_id} の照度変換テーブル(lx_to_brightness)が設定されていません"
+                "ライト %s の照度変換テーブル(lx_to_brightness)が設定されていません",
+                self.light_id,
             )
             # デフォルトの照度レベルを返す
             return 3
 
-        logger.debug(f"照度変換テーブル: {lx_to_brightness}")
+        logger.debug("照度変換テーブル: %s", lx_to_brightness)
 
         for level, range_data in lx_to_brightness.items():
             min_val = range_data.get("min", 0)
@@ -231,7 +231,7 @@ class Light:
             self._update_state(self.state, new_level)
 
         except Exception as e:
-            logger.error(f"明るさの反映に失敗しました: {e}", exc_info=True)
+            logger.error("明るさの反映に失敗しました: %s", e, exc_info=True)
 
     def change_virtual_state_state(self, new_state: str) -> bool:
         """
@@ -245,16 +245,16 @@ class Light:
         """
         try:
             if new_state not in ["ON", "OFF"]:
-                logger.warning(f"未対応の状態です: {new_state}")
+                logger.warning("未対応の状態です: %s", new_state)
                 return False
 
             old_state = self.state
 
             if old_state == new_state:
-                logger.debug(f"状態が変更されていません: {new_state}")
+                logger.debug("状態が変更されていません: %s", new_state)
                 return True
 
-            logger.info(f"ライト {self.light_id} の状態を {new_state} に変更します")
+            logger.info("ライト %s の状態を %s に変更します", self.light_id, new_state)
 
             success = False
             if new_state == "ON":
@@ -268,7 +268,7 @@ class Light:
             return success
 
         except Exception as e:
-            logger.error(f"状態変更に失敗しました: {e}", exc_info=True)
+            logger.error("状態変更に失敗しました: %s", e, exc_info=True)
             return False
 
     def change_virtual_state_brightness(
@@ -288,7 +288,7 @@ class Light:
             old_level = self.brightness_level
 
             if old_level == new_level and not force_update:
-                logger.debug(f"明るさが変更されていません: {new_level}")
+                logger.debug("明るさが変更されていません: %s", new_level)
                 return True
 
             # ライトがOFFの場合は先にONにする
@@ -302,12 +302,12 @@ class Light:
 
             if new_level > old_level:
                 # 明るさを上げる
-                logger.info(f"明るさを上げます: {old_level} → {new_level}")
+                logger.info("明るさを上げます: %s → %s", old_level, new_level)
                 steps = new_level - old_level
                 script_key = "brightness_up_service"
             elif new_level < old_level:
                 # 明るさを下げる
-                logger.info(f"明るさを下げます: {old_level} → {new_level}")
+                logger.info("明るさを下げます: %s → %s", old_level, new_level)
                 steps = old_level - new_level
                 script_key = "brightness_down_service"
             else:
@@ -319,10 +319,10 @@ class Light:
                 status_code, response_text = self._execute_script(script_key, steps)
 
                 if status_code != 200:
-                    logger.error(f"明るさ変更に失敗しました: {response_text}")
+                    logger.error("明るさ変更に失敗しました: %s", response_text)
                     return False
 
-                logger.info(f"{steps}回の明るさ変更コマンドを送信しました")
+                logger.info("%s回の明るさ変更コマンドを送信しました", steps)
 
                 # 大きな変更の場合でも待機時間を制限
                 wait_time = min(steps * 0.5, 3)
@@ -334,7 +334,7 @@ class Light:
             return False
 
         except Exception as e:
-            logger.error(f"明るさ変更に失敗しました: {e}", exc_info=True)
+            logger.error("明るさ変更に失敗しました: %s", e, exc_info=True)
             return False
 
     def change_virtual_state(self, new_state_data: Dict[str, Any]) -> bool:
@@ -386,7 +386,7 @@ class Light:
             return True
 
         except Exception as e:
-            logger.error(f"状態/明るさ変更に失敗しました: {e}", exc_info=True)
+            logger.error("状態/明るさ変更に失敗しました: %s", e, exc_info=True)
             return False
 
 
@@ -440,34 +440,58 @@ class LightController:
             # 各ライト用の必須設定を確認
             if not light.mqtt_light_topic:
                 logger.warning(
-                    f"ライト '{light_id}' のMQTTライトトピック(mqtt_light_topic)が設定されていません"
+                    "ライト '%s' のMQTTライトトピック(mqtt_light_topic)が設定されていません",
+                    light_id,
                 )
 
             if not light.mqtt_brightness_topic:
                 logger.warning(
-                    f"ライト '{light_id}' の照度トピック(mqtt_brightness_topic)が設定されていません"
+                    "ライト '%s' の照度トピック(mqtt_brightness_topic)が設定されていません",
+                    light_id,
                 )
 
             if not self.config.get(f"lights.{light_id}.lx_to_brightness"):
                 logger.warning(
-                    f"ライト '{light_id}' の照度変換テーブル(lx_to_brightness)が設定されていません"
+                    "ライト '%s' の照度変換テーブル(lx_to_brightness)が設定されていません",
+                    light_id,
                 )
 
-            # スクリプト設定の確認
-            script_keys = [
+            # IRコマンド設定の確認
+            ir_sender_type = (
+                self.config.get(f"lights.{light_id}.ir_sender") or "homeassistant"
+            )
+            command_keys = [
                 "on_service",
                 "off_service",
                 "brightness_up_service",
                 "brightness_down_service",
             ]
-            for key in script_keys:
-                if not self.config.get(f"lights.{light_id}.script_name.{key}"):
+            if ir_sender_type == "tasmota":
+                if not self.config.get(f"lights.{light_id}.tasmota.topic"):
                     logger.warning(
-                        f"ライト '{light_id}' のスクリプト '{key}' が設定されていません"
+                        "ライト '%s' のTasmotaトピック(tasmota.topic)が設定されていません",
+                        light_id,
                     )
+                for key in command_keys:
+                    if not self.config.get(
+                        f"lights.{light_id}.tasmota.ir_commands.{key}"
+                    ):
+                        logger.warning(
+                            "ライト '%s' のTasmota IRコマンド '%s' が設定されていません",
+                            light_id,
+                            key,
+                        )
+            else:
+                for key in command_keys:
+                    if not self.config.get(f"lights.{light_id}.script_name.{key}"):
+                        logger.warning(
+                            "ライト '%s' のスクリプト '%s' が設定されていません",
+                            light_id,
+                            key,
+                        )
 
             self.lights[light_id] = light
-            logger.info(f"ライト '{light_id}' を初期化しました")
+            logger.info("ライト '%s' を初期化しました", light_id)
 
     def get_light(self, light_id: str) -> Optional[Light]:
         """
@@ -507,31 +531,41 @@ class LightController:
                 if light:
                     new_level = light.convert_brightness_to_level(brightness)
                     logger.info(
-                        f"照度レベルを変換: {brightness} → {new_level} (ライトID: {light_id})"
+                        "照度レベルを変換: %s → %s (ライトID: %s)",
+                        brightness,
+                        new_level,
+                        light_id,
                     )
 
                     if light.pending_brightness is not None:
                         # 状態と明るさが同時に変更される場合
                         logger.info(
-                            f"保留中の明るさを適用: {light.pending_brightness} (ライトID: {light_id})"
+                            "保留中の明るさを適用: %s (ライトID: %s)",
+                            light.pending_brightness,
+                            light_id,
                         )
                         light.change_virtual_state_brightness(light.pending_brightness)
                         light.pending_brightness = None
                     else:
                         light.real2virtual_brightness(new_level)
                 else:
-                    logger.warning(f"ライト '{light_id}' が見つかりません")
+                    logger.warning("ライト '%s' が見つかりません", light_id)
             else:
                 # すべてのライトに適用
                 for current_light_id, light in self.lights.items():
                     new_level = light.convert_brightness_to_level(brightness)
                     logger.info(
-                        f"照度レベルを変換: {brightness} → {new_level} (ライトID: {current_light_id})"
+                        "照度レベルを変換: %s → %s (ライトID: %s)",
+                        brightness,
+                        new_level,
+                        current_light_id,
                     )
 
                     if light.pending_brightness is not None:
                         logger.info(
-                            f"保留中の明るさを適用: {light.pending_brightness} (ライトID: {current_light_id})"
+                            "保留中の明るさを適用: %s (ライトID: %s)",
+                            light.pending_brightness,
+                            current_light_id,
                         )
                         light.change_virtual_state_brightness(light.pending_brightness)
                         light.pending_brightness = None
@@ -539,7 +573,7 @@ class LightController:
                         light.real2virtual_brightness(new_level)
 
         except Exception as e:
-            logger.error(f"照度変更の処理に失敗しました: {e}", exc_info=True)
+            logger.error("照度変更の処理に失敗しました: %s", e, exc_info=True)
 
     def handle_state_change(self, state: str, light_id: Optional[str] = None) -> None:
         """
@@ -554,20 +588,20 @@ class LightController:
                 # 特定のライトの状態を変更
                 light = self.get_light(light_id)
                 if light:
-                    logger.info(f"状態変更を処理: {state} (ライトID: {light_id})")
+                    logger.info("状態変更を処理: %s (ライトID: %s)", state, light_id)
                     light.change_virtual_state_state(state)
                 else:
-                    logger.warning(f"ライト '{light_id}' が見つかりません")
+                    logger.warning("ライト '%s' が見つかりません", light_id)
             else:
                 # すべてのライトに適用
                 for current_light_id, light in self.lights.items():
                     logger.info(
-                        f"状態変更を処理: {state} (ライトID: {current_light_id})"
+                        "状態変更を処理: %s (ライトID: %s)", state, current_light_id
                     )
                     light.change_virtual_state_state(state)
 
         except Exception as e:
-            logger.error(f"状態変更の処理に失敗しました: {e}", exc_info=True)
+            logger.error("状態変更の処理に失敗しました: %s", e, exc_info=True)
 
     def handle_brightness_level_change(
         self, brightness_level: int, light_id: Optional[str] = None
@@ -584,20 +618,24 @@ class LightController:
                 light = self.get_light(light_id)
                 if light:
                     logger.info(
-                        f"明るさ変更を処理: {brightness_level} (ライトID: {light_id})"
+                        "明るさ変更を処理: %s (ライトID: %s)",
+                        brightness_level,
+                        light_id,
                     )
                     light.change_virtual_state_brightness(
                         brightness_level, force_update=True
                     )
                 else:
-                    logger.warning(f"ライト '{light_id}' が見つかりません")
+                    logger.warning("ライト '%s' が見つかりません", light_id)
             else:
                 for current_light_id, light in self.lights.items():
                     logger.info(
-                        f"明るさ変更を処理: {brightness_level} (ライトID: {current_light_id})"
+                        "明るさ変更を処理: %s (ライトID: %s)",
+                        brightness_level,
+                        current_light_id,
                     )
                     light.change_virtual_state_brightness(
                         brightness_level, force_update=True
                     )
         except Exception as e:
-            logger.error(f"明るさ変更の処理に失敗しました: {e}", exc_info=True)
+            logger.error("明るさ変更の処理に失敗しました: %s", e, exc_info=True)

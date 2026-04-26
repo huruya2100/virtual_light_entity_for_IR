@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional, Union
 
 from paho.mqtt import client as mqtt_client
 
-from config import Config
+from .config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,11 @@ class BaseMQTTClient:
     def setup_client(self) -> None:
         """MQTTクライアントの初期設定"""
         self.client = mqtt_client.Client(
-            client_id="", userdata=None, protocol=mqtt_client.MQTTv5, transport="tcp"
+            callback_api_version=mqtt_client.CallbackAPIVersion.VERSION2,
+            client_id="",
+            userdata=None,
+            protocol=mqtt_client.MQTTv5,
+            transport="tcp",
         )
 
         username = self.config.get("mqtt.username")
@@ -50,18 +54,27 @@ class BaseMQTTClient:
         self.client.on_message = self.on_message
         self.client.on_disconnect = self.on_disconnect
 
-    def on_disconnect(self, client, userdata, rc, properties=None) -> None:
+    def on_disconnect(
+        self, client, userdata, disconnect_flags, rc, properties=None
+    ) -> None:
         """
         切断時のコールバック
 
         Args:
             client: MQTTクライアント
             userdata: ユーザデータ
+            disconnect_flags: 切断フラグ
             rc: 結果コード
             properties: プロパティ
         """
         logger.info("MQTTブローカーから切断されました")
-        logger.debug(f"Client: {client}, Userdata: {userdata}, Result code: {rc}")
+        logger.debug(
+            "Client: %s, Userdata: %s, Disconnect flags: %s, Result code: %s",
+            client,
+            userdata,
+            disconnect_flags,
+            rc,
+        )
         self.is_connected = False
 
         # 予期せぬ切断の場合は再接続を試みる
@@ -76,7 +89,7 @@ class BaseMQTTClient:
 
         while not self.is_connected and reconnect_count < MAX_RECONNECT_COUNT:
             logger.info(
-                f"再接続を試みます... ({reconnect_count + 1}/{MAX_RECONNECT_COUNT})"
+                "再接続を試みます... (%s/%s)", reconnect_count + 1, MAX_RECONNECT_COUNT
             )
 
             try:
@@ -85,18 +98,19 @@ class BaseMQTTClient:
                 logger.info("再接続に成功しました")
                 return
             except Exception as e:
-                logger.error(f"再接続に失敗しました: {e}")
+                logger.error("再接続に失敗しました: %s", e)
 
             # 再接続の試行回数を増やす
             reconnect_count += 1
 
             # 次の再接続までの待機時間を計算（指数バックオフ）
             reconnect_delay = min(reconnect_delay * RECONNECT_RATE, MAX_RECONNECT_DELAY)
-            logger.info(f"{reconnect_delay}秒後に再接続を試みます...")
+            logger.info("%s秒後に再接続を試みます...", reconnect_delay)
             time.sleep(reconnect_delay)
 
         logger.error(
-            f"再接続の最大試行回数({MAX_RECONNECT_COUNT})に達しました。接続を中止します。"
+            "再接続の最大試行回数(%s)に達しました。接続を中止します。",
+            MAX_RECONNECT_COUNT,
         )
 
     def connect(self) -> bool:
@@ -119,13 +133,13 @@ class BaseMQTTClient:
                 )
                 return False
 
-            logger.info(f"MQTTブローカーに接続: {host}:{port}")
+            logger.info("MQTTブローカーに接続: %s:%s", host, port)
             self.client.connect(host, port, keepalive=60)
             self.client.loop_start()
             self.is_connected = True
             return True
         except Exception as e:
-            logger.error(f"MQTT接続に失敗しました: {e}")
+            logger.error("MQTT接続に失敗しました: %s", e)
             self.is_connected = False
             return False
 
@@ -140,7 +154,7 @@ class BaseMQTTClient:
             self.client.disconnect()
             self.is_connected = False
         except Exception as e:
-            logger.error(f"MQTT切断に失敗しました: {e}")
+            logger.error("MQTT切断に失敗しました: %s", e)
 
     def publish(self, topic: str, payload: Union[str, Dict[str, Any]]) -> None:
         """
@@ -155,14 +169,14 @@ class BaseMQTTClient:
             if isinstance(payload, dict):
                 payload = json.dumps(payload)
 
-            logger.debug(f"メッセージを発行: {topic} {payload}")
+            logger.debug("メッセージを発行: %s %s", topic, payload)
 
             if not self.is_connected:
                 self.connect()
 
             self.client.publish(topic, payload)
         except Exception as e:
-            logger.error(f"メッセージ発行に失敗しました: {e}", exc_info=True)
+            logger.error("メッセージ発行に失敗しました: %s", e, exc_info=True)
 
     def subscribe(self, topic: str, qos: int = 0) -> None:
         """
@@ -176,10 +190,10 @@ class BaseMQTTClient:
             if not self.is_connected:
                 self.connect()
 
-            logger.debug(f"トピックを購読: {topic} (QoS: {qos})")
+            logger.debug("トピックを購読: %s (QoS: %s)", topic, qos)
             self.client.subscribe(topic, qos)
         except Exception as e:
-            logger.error(f"トピック購読に失敗しました: {e}", exc_info=True)
+            logger.error("トピック購読に失敗しました: %s", e, exc_info=True)
 
     def on_connect(self, client, userdata, flags, rc, properties=None) -> None:
         """
@@ -196,10 +210,14 @@ class BaseMQTTClient:
             logger.info("MQTT接続完了")
             self.is_connected = True
         else:
-            logger.error(f"MQTT接続失敗 結果コード: {rc}")
+            logger.error("MQTT接続失敗 結果コード: %s", rc)
 
         logger.debug(
-            f"Client: {client}, Userdata: {userdata}, Flags: {flags}, Properties: {properties}"
+            "Client: %s, Userdata: %s, Flags: %s, Properties: %s",
+            client,
+            userdata,
+            flags,
+            properties,
         )
 
     def on_message(self, client, userdata, msg) -> None:
@@ -211,8 +229,8 @@ class BaseMQTTClient:
             userdata: ユーザデータ
             msg: 受信メッセージ
         """
-        logger.info(f"メッセージ受信: {msg.topic} {msg.payload.decode('utf-8')}")
-        logger.debug(f"Client: {client}, Userdata: {userdata}")
+        logger.info("メッセージ受信: %s %s", msg.topic, msg.payload.decode("utf-8"))
+        logger.debug("Client: %s, Userdata: %s", client, userdata)
 
 
 class MQTTPublisher(BaseMQTTClient):
@@ -241,7 +259,7 @@ class MQTTPublisher(BaseMQTTClient):
 
             self.publish(topic, json.dumps(payload))
         except Exception as e:
-            logger.error(f"安全なメッセージ発行に失敗しました: {e}", exc_info=True)
+            logger.error("安全なメッセージ発行に失敗しました: %s", e, exc_info=True)
 
     def publish_light_state(
         self, topic: str, state: str, brightness: Optional[int] = None

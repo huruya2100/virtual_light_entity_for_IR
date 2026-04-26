@@ -40,7 +40,7 @@ class Config:
         try:
             # ファイルが存在しない場合はエラー
             if not os.path.exists(self.json_path):
-                logger.error(f"設定ファイルが見つかりません: {self.json_path}")
+                logger.error("設定ファイルが見つかりません: %s", self.json_path)
                 return False
 
             # ファイルの最終更新時刻を取得
@@ -55,14 +55,14 @@ class Config:
 
             self.config = json.loads(json_data)
             self.last_modified_time = current_mtime
-            logger.debug(f"設定ファイルを読み込みました: {self.json_path}")
+            logger.debug("設定ファイルを読み込みました: %s", self.json_path)
             return True
 
         except json.JSONDecodeError as e:
-            logger.error(f"設定ファイルのJSONフォーマットが無効です: {e}")
+            logger.error("設定ファイルのJSONフォーマットが無効です: %s", e)
             return False
         except Exception as e:
-            logger.error(f"設定ファイルの読み込みに失敗しました: {e}", exc_info=True)
+            logger.error("設定ファイルの読み込みに失敗しました: %s", e, exc_info=True)
             return False
 
     def get(self, key_path: str, default: Any = None) -> Any:
@@ -121,10 +121,10 @@ class Config:
             with open(self.json_path, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=4, ensure_ascii=False)
             self.last_modified_time = os.path.getmtime(self.json_path)
-            logger.debug(f"設定を保存しました: {key_path} = {value}")
+            logger.debug("設定を保存しました: %s = %s", key_path, value)
             return True
         except Exception as e:
-            logger.error(f"設定の保存に失敗しました: {e}", exc_info=True)
+            logger.error("設定の保存に失敗しました: %s", e, exc_info=True)
             return False
 
     def get_all(self) -> Dict[str, Any]:

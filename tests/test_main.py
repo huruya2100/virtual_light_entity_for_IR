@@ -1,15 +1,13 @@
-import pytest
 import unittest.mock
-from unittest.mock import patch, MagicMock
-from virtual_light_entity_for_IR.main import (
-    Config,
-    MQTTClient,
-    Light,
-    HomeAssistantClient,
-    BaseMQTTClient,
-    MQTTPublisher,
-)
-import json
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from virtual_light_entity_for_IR.main import _get_log_level
+from virtual_light_entity_for_IR.config import Config
+from virtual_light_entity_for_IR.homeassistant import HomeAssistantClient
+from virtual_light_entity_for_IR.light_controller import Light
+from virtual_light_entity_for_IR.mqtt import BaseMQTTClient, MQTTPublisher
 
 CONFIG_PATH = "settings.json"
 
@@ -25,9 +23,12 @@ def config():
         return Config(CONFIG_PATH)
 
 
-@pytest.fixture
-def mqtt_client(config):
-    return MQTTClient(config)
+def test_get_log_level():
+    import logging
+
+    assert _get_log_level("INFO") == logging.INFO
+    assert _get_log_level("debug") == logging.DEBUG
+    assert _get_log_level("invalid") == logging.DEBUG
 
 
 # BaseMQTTClient クラスのテスト
@@ -85,100 +86,10 @@ def test_base_mqtt_client_disconnect():
         mock_client.return_value = client_instance
 
         base_mqtt = BaseMQTTClient(config)
+        base_mqtt.is_connected = True
         base_mqtt.disconnect()
 
         client_instance.disconnect.assert_called_once()
-
-
-# MQTTClient クラスのテスト
-def test_mqtt_client_handle_brightness_message():
-    config = MagicMock()
-    config.get.side_effect = lambda key, default=None: {
-        "mqtt.topics.brightness_topic": "brightness",
-        "mqtt.topics.light_topic": "light",
-    }.get(key, default)
-
-    mqtt_client = MQTTClient(config)
-    mqtt_client.light = MagicMock()
-    mqtt_client.light.pending_brightness = None
-    mqtt_client.light.convert_brightness_to_level.return_value = 3
-
-    # メッセージをモック
-    msg = MagicMock()
-    msg.topic = "brightness"
-    msg.payload.decode.return_value = "45.7"
-
-    with patch.object(mqtt_client, "publish") as mock_publish:
-        mqtt_client._handle_brightness_message(msg)
-        mqtt_client.light.convert_brightness_to_level.assert_called_once_with(45.7)
-        mqtt_client.light.real2virtual_brightness.assert_called_once_with(3)
-
-
-def test_mqtt_client_handle_brightness_with_pending():
-    config = MagicMock()
-    config.get.side_effect = lambda key, default=None: {
-        "mqtt.topics.brightness_topic": "brightness",
-        "mqtt.topics.light_topic": "light",
-    }.get(key, default)
-
-    mqtt_client = MQTTClient(config)
-    mqtt_client.light = MagicMock()
-    mqtt_client.light.pending_brightness = 5
-    mqtt_client.light.brightness_level = 3
-    mqtt_client.light.convert_brightness_to_level.return_value = 4
-
-    # メッセージをモック
-    msg = MagicMock()
-    msg.topic = "brightness"
-    msg.payload.decode.return_value = "45.7"
-
-    with patch.object(mqtt_client, "publish") as mock_publish:
-        mqtt_client._handle_brightness_message(msg)
-        mqtt_client.light.change_virtual_state_brightness.assert_called_once_with(3, 5)
-        mock_publish.assert_called_once()
-        assert mqtt_client.light.pending_brightness is None
-
-
-def test_mqtt_client_handle_light_set_message_state_only():
-    config = MagicMock()
-    mqtt_client = MQTTClient(config)
-    mqtt_client.light = MagicMock()
-
-    # メッセージをモック
-    msg = MagicMock()
-    msg.topic = "light/set"
-    msg.payload.decode.return_value = json.dumps({"state": "on"})
-
-    mqtt_client._handle_light_set_message(msg)
-    mqtt_client.light.change_virtual_state_state.assert_called_once_with("ON")
-
-
-def test_mqtt_client_handle_light_set_message_brightness_only():
-    config = MagicMock()
-    mqtt_client = MQTTClient(config)
-    mqtt_client.light = MagicMock()
-
-    # メッセージをモック
-    msg = MagicMock()
-    msg.topic = "light/set"
-    msg.payload.decode.return_value = json.dumps({"brightness": 4})
-
-    mqtt_client._handle_light_set_message(msg)
-    mqtt_client.light.change_virtual_state_brightness.assert_called_once_with(4)
-
-
-def test_mqtt_client_handle_light_set_message_both():
-    config = MagicMock()
-    mqtt_client = MQTTClient(config)
-    mqtt_client.light = MagicMock()
-
-    # メッセージをモック
-    msg = MagicMock()
-    msg.topic = "light/set"
-    msg.payload.decode.return_value = json.dumps({"state": "on", "brightness": 4})
-
-    mqtt_client._handle_light_set_message(msg)
-    mqtt_client.light.change_virtual_state.assert_called_once()
 
 
 # MQTTPublisher クラスのテスト
@@ -217,62 +128,58 @@ def test_home_assistant_client_call_script_service():
 # Light クラスのテスト
 def test_light_set_brightness():
     config = MagicMock()
-    light = Light(config)
+    ha_mock = MagicMock()
+    mqtt_mock = MagicMock()
+    light = Light("test_light", config, ha_mock, mqtt_mock)
     light.set_brightness(3)
     assert light.brightness_level == 3
 
 
 def test_light_change_virtual_state_brightness_increase():
     config = MagicMock()
-    light = Light(config)
+    ha_mock = MagicMock()
+    mqtt_mock = MagicMock()
+    light = Light("test_light", config, ha_mock, mqtt_mock)
     light.brightness_level = 2
     light.state = "ON"
 
-    with patch.object(
-        light.home_assistant, "call_script_service"
-    ) as mock_call, patch.object(light.mqtt, "connect"), patch.object(
-        light.mqtt, "publish"
-    ), patch.object(
-        light.mqtt, "disconnect"
-    ), patch(
+    with patch.object(light.ir_sender, "send_command") as mock_send, patch(
         "time.sleep"
     ):
-        mock_call.return_value = (200, "OK")
+        mock_send.return_value = (200, "OK")
 
         light.change_virtual_state_brightness(4)
 
-        mock_call.assert_called_once()
-        light.mqtt.publish.assert_called_once()
+        mock_send.assert_called_once()
+        mqtt_mock.safe_publish.assert_called_once()
         assert light.brightness_level == 4
 
 
 def test_light_change_virtual_state_brightness_decrease():
     config = MagicMock()
-    light = Light(config)
+    ha_mock = MagicMock()
+    mqtt_mock = MagicMock()
+    light = Light("test_light", config, ha_mock, mqtt_mock)
     light.brightness_level = 4
     light.state = "ON"
 
-    with patch.object(
-        light.home_assistant, "call_script_service"
-    ) as mock_call, patch.object(light.mqtt, "connect"), patch.object(
-        light.mqtt, "publish"
-    ), patch.object(
-        light.mqtt, "disconnect"
-    ), patch(
+    with patch.object(light.ir_sender, "send_command") as mock_send, patch(
         "time.sleep"
     ):
-        mock_call.return_value = (200, "OK")
+        mock_send.return_value = (200, "OK")
 
         light.change_virtual_state_brightness(2)
 
-        mock_call.assert_called_once()
-        light.mqtt.publish.assert_called_once()
+        mock_send.assert_called_once()
+        mqtt_mock.safe_publish.assert_called_once()
         assert light.brightness_level == 2
 
 
 def test_light_change_virtual_state():
     config = MagicMock()
-    light = Light(config)
+    ha_mock = MagicMock()
+    mqtt_mock = MagicMock()
+    light = Light("test_light", config, ha_mock, mqtt_mock)
     light.brightness_level = 3
     light.state = "OFF"
 

@@ -1,11 +1,12 @@
 settings.json
 archive.py
 archive/
-
+uv.lock
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+.ruff_cache/
 
 # C extensions
 *.so

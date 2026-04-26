@@ -1,5 +1,16 @@
 version: '3'
 services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./tests/integration/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    profiles:
+      - test
   virtual_light:
     build: .
     network_mode: "host"
+    restart: always
+    environment:
+      LOG_LEVEL: INFO

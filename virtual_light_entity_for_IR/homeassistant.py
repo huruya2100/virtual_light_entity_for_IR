@@ -4,7 +4,7 @@ Home Assistant API通信モジュール
 
 import logging
 import time
-from typing import Dict, Any, Tuple
+from typing import Any, Dict, Tuple
 
 import requests
 
@@ -44,7 +44,7 @@ class HomeAssistantClient:
             logger.warning("スクリプト名が指定されていません")
             return 0, "Script name not specified"
 
-        logger.info(f"スクリプト実行: {script_name} (繰り返し: {repeat}回)")
+        logger.info("スクリプト実行: %s (繰り返し: %s回)", script_name, repeat)
         url = f"{self.url}/api/services/script/turn_on"
         payload = {"entity_id": script_name}
 
@@ -54,20 +54,20 @@ class HomeAssistantClient:
                 response = requests.post(url, headers=self.headers, json=payload)
                 if response.status_code != 200:
                     logger.warning(
-                        f"APIコール失敗: {response.status_code} {response.text}"
+                        "APIコール失敗: %s %s", response.status_code, response.text
                     )
                 time.sleep(0.5)
 
             status_code = response.status_code if response else 0
             text = response.text if response else ""
-            logger.debug(f"API レスポンス: {status_code} {text}")
+            logger.debug("API レスポンス: %s %s", status_code, text)
             return status_code, text
         except requests.RequestException as e:
-            logger.error(f"Home Assistant APIの通信エラー: {e}", exc_info=True)
+            logger.error("Home Assistant APIの通信エラー: %s", e, exc_info=True)
             return 0, f"通信エラー: {str(e)}"
         except Exception as e:
             logger.error(
-                f"Home Assistant APIの呼び出しに失敗しました: {e}", exc_info=True
+                "Home Assistant APIの呼び出しに失敗しました: %s", e, exc_info=True
             )
             return 0, str(e)
 
@@ -81,7 +81,7 @@ class HomeAssistantClient:
         Returns:
             Tuple[int, Dict]: ステータスコードとエンティティ情報のタプル
         """
-        logger.info(f"エンティティ状態を取得: {entity_id}")
+        logger.info("エンティティ状態を取得: %s", entity_id)
         url = f"{self.url}/api/states/{entity_id}"
 
         try:
@@ -90,16 +90,16 @@ class HomeAssistantClient:
 
             if status_code == 200:
                 data = response.json()
-                logger.debug(f"エンティティ状態: {data}")
+                logger.debug("エンティティ状態: %s", data)
                 return status_code, data
             else:
                 logger.warning(
-                    f"エンティティ状態取得失敗: {status_code} {response.text}"
+                    "エンティティ状態取得失敗: %s %s", status_code, response.text
                 )
                 return status_code, {}
         except Exception as e:
             logger.error(
-                f"エンティティ状態取得中にエラーが発生しました: {e}", exc_info=True
+                "エンティティ状態取得中にエラーが発生しました: %s", e, exc_info=True
             )
             return 0, {}
 
@@ -117,7 +117,9 @@ class HomeAssistantClient:
         Returns:
             Tuple[int, str]: ステータスコードとレスポンステキストのタプル
         """
-        logger.info(f"サービス呼び出し: {domain}.{service} - データ: {service_data}")
+        logger.info(
+            "サービス呼び出し: %s.%s - データ: %s", domain, service, service_data
+        )
         url = f"{self.url}/api/services/{domain}/{service}"
 
         try:
@@ -125,12 +127,14 @@ class HomeAssistantClient:
             status_code = response.status_code
 
             if status_code != 200:
-                logger.warning(f"サービス呼び出し失敗: {status_code} {response.text}")
+                logger.warning(
+                    "サービス呼び出し失敗: %s %s", status_code, response.text
+                )
 
             return status_code, response.text
         except Exception as e:
             logger.error(
-                f"サービス呼び出し中にエラーが発生しました: {e}", exc_info=True
+                "サービス呼び出し中にエラーが発生しました: %s", e, exc_info=True
             )
             return 0, str(e)
 
@@ -144,7 +148,7 @@ class HomeAssistantClient:
         Returns:
             Tuple[int, Dict]: ステータスコードとデバイス情報のタプル
         """
-        logger.info(f"デバイス情報を取得: {device_id}")
+        logger.info("デバイス情報を取得: %s", device_id)
         url = f"{self.url}/api/config/device_registry"
 
         try:
@@ -156,13 +160,15 @@ class HomeAssistantClient:
                 for device in devices:
                     if device.get("id") == device_id:
                         return status_code, device
-                logger.warning(f"デバイスが見つかりません: {device_id}")
+                logger.warning("デバイスが見つかりません: %s", device_id)
                 return status_code, {}
             else:
-                logger.warning(f"デバイス情報取得失敗: {status_code} {response.text}")
+                logger.warning(
+                    "デバイス情報取得失敗: %s %s", status_code, response.text
+                )
                 return status_code, {}
         except Exception as e:
             logger.error(
-                f"デバイス情報取得中にエラーが発生しました: {e}", exc_info=True
+                "デバイス情報取得中にエラーが発生しました: %s", e, exc_info=True
             )
             return 0, {}
