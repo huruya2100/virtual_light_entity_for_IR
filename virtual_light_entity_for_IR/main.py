@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -9,9 +10,19 @@ from .homeassistant import HomeAssistantClient
 from .light_controller import LightController
 from .mqtt import BaseMQTTClient
 
+
+def _get_log_level(log_level_name: str) -> int:
+    """ログレベル名をloggingのレベル値に変換する"""
+    log_level = getattr(logging, log_level_name.upper(), None)
+    if isinstance(log_level, int):
+        return log_level
+    return logging.DEBUG
+
+
 # ロガー設定
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=_get_log_level(os.getenv("LOG_LEVEL", "DEBUG")),
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 

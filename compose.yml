@@ -12,4 +12,5 @@ services:
     build: .
     network_mode: "host"
     restart: always
-
+    environment:
+      LOG_LEVEL: INFO

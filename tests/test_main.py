@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from virtual_light_entity_for_IR.main import _get_log_level
 from virtual_light_entity_for_IR.config import Config
 from virtual_light_entity_for_IR.homeassistant import HomeAssistantClient
 from virtual_light_entity_for_IR.light_controller import Light
@@ -20,6 +21,14 @@ def config():
         ),
     ):
         return Config(CONFIG_PATH)
+
+
+def test_get_log_level():
+    import logging
+
+    assert _get_log_level("INFO") == logging.INFO
+    assert _get_log_level("debug") == logging.DEBUG
+    assert _get_log_level("invalid") == logging.DEBUG
 
 
 # BaseMQTTClient クラスのテスト
