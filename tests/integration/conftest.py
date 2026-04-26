@@ -1,6 +1,7 @@
 """
 統合テスト用フィクスチャ
 """
+
 import threading
 import time
 

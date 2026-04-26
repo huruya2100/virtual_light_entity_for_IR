@@ -1,6 +1,7 @@
 """
 ir_sender モジュールのテスト
 """
+
 from unittest.mock import MagicMock, patch
 from virtual_light_entity_for_IR.ir_sender import (
     HomeAssistantIRSender,
@@ -8,8 +9,8 @@ from virtual_light_entity_for_IR.ir_sender import (
     create_ir_sender,
 )
 
-
 # HomeAssistantIRSender のテスト
+
 
 def test_ha_sender_send_command_success():
     config = MagicMock()
@@ -51,6 +52,7 @@ def test_ha_sender_send_command_repeat():
 
 
 # TasmotaIRSender のテスト
+
 
 def test_tasmota_sender_send_command_success():
     config = MagicMock()
@@ -133,13 +135,16 @@ def test_tasmota_sender_publish_error():
 
 # create_ir_sender ファクトリ関数のテスト
 
+
 def test_create_ir_sender_homeassistant():
     config = MagicMock()
     config.get.return_value = "homeassistant"
     ha_mock = MagicMock()
     mqtt_mock = MagicMock()
 
-    sender = create_ir_sender("test_light", "lights.test_light", config, ha_mock, mqtt_mock)
+    sender = create_ir_sender(
+        "test_light", "lights.test_light", config, ha_mock, mqtt_mock
+    )
 
     assert isinstance(sender, HomeAssistantIRSender)
 
@@ -150,7 +155,9 @@ def test_create_ir_sender_tasmota():
     ha_mock = MagicMock()
     mqtt_mock = MagicMock()
 
-    sender = create_ir_sender("test_light", "lights.test_light", config, ha_mock, mqtt_mock)
+    sender = create_ir_sender(
+        "test_light", "lights.test_light", config, ha_mock, mqtt_mock
+    )
 
     assert isinstance(sender, TasmotaIRSender)
 
@@ -161,6 +168,8 @@ def test_create_ir_sender_default_is_homeassistant():
     ha_mock = MagicMock()
     mqtt_mock = MagicMock()
 
-    sender = create_ir_sender("test_light", "lights.test_light", config, ha_mock, mqtt_mock)
+    sender = create_ir_sender(
+        "test_light", "lights.test_light", config, ha_mock, mqtt_mock
+    )
 
     assert isinstance(sender, HomeAssistantIRSender)

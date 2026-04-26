@@ -4,6 +4,7 @@ MQTT統合テスト
 実際のMQTTブローカー（mosquitto）に接続して動作を確認します。
 ブローカーが localhost:1883 で起動していることが必要です。
 """
+
 import json
 import time
 
@@ -31,6 +32,7 @@ def _make_config(host=MQTT_HOST, port=MQTT_PORT):
 
 
 # --- BaseMQTTClient ---
+
 
 class TestBaseMQTTClientIntegration:
     def test_connect_and_disconnect(self):
@@ -97,6 +99,7 @@ class TestBaseMQTTClientIntegration:
 
 
 # --- MQTTPublisher ---
+
 
 class TestMQTTPublisherIntegration:
     def test_safe_publish(self, collector):
@@ -192,9 +195,7 @@ class TestMQTTPublisherIntegration:
         topic = "test/publisher/auto_connect"
         collector._messages.clear()
 
-        sub_client = paho_mqtt.Client(
-            client_id="sub_auto", protocol=paho_mqtt.MQTTv5
-        )
+        sub_client = paho_mqtt.Client(client_id="sub_auto", protocol=paho_mqtt.MQTTv5)
         sub_client.on_message = collector.on_message
         sub_client.connect(MQTT_HOST, MQTT_PORT)
         sub_client.subscribe(topic)
